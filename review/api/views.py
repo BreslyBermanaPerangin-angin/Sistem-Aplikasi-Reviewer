@@ -15,6 +15,7 @@ from rest_framework import status
 from review_app.models import FoodPlace
 from api.serializers import FoodPlaceSerializer
 from django.shortcuts import get_object_or_404
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from review_app.models import (
     User,
@@ -27,10 +28,12 @@ from review_app.models import (
 from api.serializers import (
     FoodPlaceSerializer,
     FoodItemSerializer,
-    FoodReviewSerializer,
     CategorySerializer,
     RegisterUserSerializer,
     LoginSerializer,
+    UserViewSet,
+    FoodReviewReadSerializer,
+    FoodReviewWriteSerializer,
 )
 from .paginators import CostumPagination
 
@@ -162,6 +165,7 @@ class FoodPlaceDetailApiView(APIView):
 
 
 class FoodItemListApiView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -200,6 +204,7 @@ class FoodItemListApiView(APIView):
 
 
 class FoodItemDetailApiView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -266,7 +271,7 @@ class FoodReviewApiView(APIView):
 
     def get(self, request):
         reviews = FoodReview.objects.select_related("food", "reviewer").all()
-        serializer = FoodReviewSerializer(reviews, many=True)
+        serializer = FoodReviewReadSerializer(reviews, many=True)
         return Response(
             {
                 "status": status.HTTP_200_OK,
@@ -276,14 +281,43 @@ class FoodReviewApiView(APIView):
         )
 
     def post(self, request):
-        serializer = FoodReviewSerializer(data=request.data)
+        data = request.data.copy()
+        serializer = FoodReviewWriteSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
+            food_id = (
+                serializer.validated_data["food"].id
+                if hasattr(serializer.validated_data["food"], "id")
+                else serializer.validated_data["food"]
+            )
+            food = FoodItem.objects.get(pk=food_id)
+            review = serializer.save(
+                reviewer=request.user, place=food.place
+            )
+            read_serializer = FoodReviewReadSerializer(review)
             return Response(
                 {
                     "status": status.HTTP_201_CREATED,
                     "message": "Review berhasil ditambahkan",
-                    "data": serializer.data,
+                    "data": read_serializer.data,
                 }
             )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self, request, pk):
+        review = get_object_or_404(FoodReview, pk=pk)
+        data = request.data.copy()
+        serializer = FoodReviewWriteSerializer(review, data=data)
+        if serializer.is_valid():
+            food_id = serializer.validated_data['food'].id if hasattr(serializer.validated_data['food'], 'id') else serializer.validated_data['food']
+            food = FoodItem.objects.get(pk=food_id)
+            updated_review = serializer.save(
+                reviewer=request.user,
+                place=food.place
+            )
+            read_serializer = FoodReviewReadSerializer(updated_review)
+            return Response({
+                "status": status.HTTP_200_OK,
+                "message": "Review berhasil diperbarui",
+                "data": read_serializer.data,
+            })
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

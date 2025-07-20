@@ -118,6 +118,7 @@ class FoodItem(models.Model):
 class FoodReview(models.Model):
     food = models.ForeignKey(FoodItem, related_name="reviews", on_delete=models.CASCADE)
     reviewer = models.ForeignKey(User, related_name="reviewer", on_delete=models.CASCADE)
+    place = models.ForeignKey(FoodPlace, related_name="reviews", on_delete=models.CASCADE, null=True, blank=True)
     rating = models.PositiveIntegerField()
     comment = models.TextField()
     distance_km = models.FloatField(help_text="Jarak dari reviewer ke lokasi (dalam km)")

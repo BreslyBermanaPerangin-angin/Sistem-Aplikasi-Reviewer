@@ -3,8 +3,10 @@ from .views import (
     RegisterUserAPIView, LoginView,
     FoodPlaceListApiView,
     FoodItemListApiView, FoodItemDetailApiView,
-    FoodItemFilterApi, FoodReviewApiView, FoodPlaceDetailApiView
+    FoodItemFilterApi, FoodReviewApiView, FoodPlaceDetailApiView,
+    UserViewSet
 )
+from rest_framework.routers import DefaultRouter
 
 app_name = 'api'
 
@@ -17,4 +19,9 @@ urlpatterns = [
     path('api/foods/<int:pk>/', FoodItemDetailApiView.as_view()),
     path('api/foods/filter/', FoodItemFilterApi.as_view()),
     path('api/reviews/', FoodReviewApiView.as_view()),
+    path('api/reviews/<int:pk>/', FoodReviewApiView.as_view()),
 ]
+
+router = DefaultRouter()
+router.register(r'users', UserViewSet)
+urlpatterns += router.urls

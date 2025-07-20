@@ -6,10 +6,8 @@ from django.contrib.auth import authenticate
 from rest_framework.validators import UniqueValidator
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import viewsets
 
-# ======================
-# SERIALIZER: FoodPlace
-# ======================
 
 class FoodPlaceSerializer(serializers.ModelSerializer):
     status = serializers.PrimaryKeyRelatedField(queryset=StatusModel.objects.all())
@@ -24,9 +22,6 @@ class FoodPlaceSerializer(serializers.ModelSerializer):
         rep['status'] = str(instance.status)
         return rep
 
-# ======================
-# SERIALIZER: Category
-# ======================
 
 class CategorySerializer(serializers.ModelSerializer):
     status = serializers.StringRelatedField()
@@ -35,9 +30,6 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ['id', 'name', 'status']
 
-# ======================
-# SERIALIZER: FoodItem
-# ======================
 
 class FoodItemSerializer(serializers.ModelSerializer):
     category = serializers.StringRelatedField()
@@ -48,21 +40,18 @@ class FoodItemSerializer(serializers.ModelSerializer):
         model = FoodItem
         fields = ['id', 'code', 'name', 'price', 'description', 'image', 'category', 'place', 'status']
 
-# ======================
-# SERIALIZER: FoodReview
-# ======================
 
-class FoodReviewSerializer(serializers.ModelSerializer):
-    food = serializers.StringRelatedField()
-    reviewer = serializers.StringRelatedField()
-
+class FoodReviewReadSerializer(serializers.ModelSerializer):
+    reviewer = serializers.CharField(source='reviewer.username', read_only=True)
+    place = serializers.CharField(source='place.name', read_only=True)
     class Meta:
         model = FoodReview
-        fields = ['id', 'food', 'reviewer', 'rating', 'comment', 'distance_km', 'created_at']
-
-# ======================
-# SERIALIZER: Register User
-# ======================
+        fields = ['id', 'food', 'reviewer', 'place', 'rating', 'comment', 'distance_km', 'created_at']
+        
+class FoodReviewWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FoodReview
+        fields = ['id', 'food', 'rating', 'comment', 'distance_km']
 
 class RegisterUserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
@@ -98,10 +87,6 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-# ======================
-# SERIALIZER: Login
-# ======================
-
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField()
@@ -122,3 +107,12 @@ class LoginSerializer(serializers.Serializer):
         else:
             raise ValidationError({'message': 'Mohon lengkapi username dan password.'})
         return data
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username']
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
